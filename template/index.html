@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+{% block title %}Control{% end %}
+{% block head %}
+	<script type="text/javascript" src="/static/jquery.websocket-0.0.1.js"></script>
+	<style>
+		.table-borderless > tbody > tr > td,
+		.table-borderless > tbody > tr > th,
+		.table-borderless > tfoot > tr > td,
+		.table-borderless > tfoot > tr > th,
+		.table-borderless > thead > tr > td,
+		.table-borderless > thead > tr > th {
+			border: none;
+		}
+		.btn-c {        
+			font-size: 15px;
+			font-weight: bold;
+			height: 60px;
+			width: 60px;
+		}
+		.btn-s {        
+			font-size: 15px;
+			font-weight: bold;
+			height: 60px;
+			width: 120px;
+		}
+        .font-size-lg {
+			font-size: 32px;
+		}
+	</style>
+{% end %}
+{% block body %}
+	<nav class="navbar navbar-default">
+	  <div class="container-fluid">
+		<div class="navbar-header">
+		  <a class="navbar-brand" href="#">
+			Main Sprinkler
+		  </a>
+		</div>
+		<ul class="nav navbar-nav">
+			<li class="active"><a href="#">Control</a></li>
+			<li><a href="/settings">Settings</a></li>
+		</ul>
+		<div class="navbar-text navbar-right">
+			
+			<a href="/logout" class="navbar-link">Logout</a>
+		</div>
+	  </div>
+	</nav>
+	
+	<div class="container">
+		<table class="table table-borderless text-center">
+			<tr>
+				<td>
+					<div class="border rounded font-size-lg">
+					<span id="ws_connected" class="glyphicon glyphicon-eye-open" title="Connected"></span>
+					<span id="ws_disconnected" class="glyphicon glyphicon-eye-close" title="Disconnected"></span>
+					<span id="cloud_status" class="glyphicon glyphicon-cloud" title=""></span>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div id="en_message"></div>
+				</td>
+			</tr>
+		</table>
+		<table id="controls" class="table table-borderless text-center">
+			<tr>
+                <td colspan="4">
+                    <h2>Automatic (20 min)</h2>
+                    <hr>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <button id="btn_start" class="btn btn-default btn-s" type="button">START</button>
+                    <button id="btn_stop" class="btn btn-success btn-s" type="button">STOP</button>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <h2>Manual</h2>
+                    <hr>
+                </td>
+            </tr>
+            <tr>
+				<td>
+					<button id="btn_11_on" class="btn btn-default btn-c" type="button">11</button>
+					<button id="btn_11_off" class="btn btn-success btn-c" type="button">11</button>
+				</td>
+				<td>
+					<button id="btn_12_on" class="btn btn-default btn-c" type="button">12</button>
+					<button id="btn_12_off" class="btn btn-success btn-c" type="button">12</button>
+				</td>
+				<td>
+					<button id="btn_1_on" class="btn btn-default btn-c" type="button">1</button>
+					<button id="btn_1_off" class="btn btn-success btn-c" type="button">1</button>
+				</td>
+				<td>
+					<button id="btn_2_on" class="btn btn-default btn-c" type="button">2</button>
+					<button id="btn_2_off" class="btn btn-success btn-c" type="button">2</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button id="btn_10_on" class="btn btn-default btn-c" type="button">10</button>
+					<button id="btn_10_off" class="btn btn-success btn-c" type="button">10</button>
+				</td>
+				<td colspan="2">
+					<button id="btn_all_on" class="btn btn-default btn-c" type="button">ON</button>
+				</td>
+				<td>
+					<button id="btn_3_on" class="btn btn-default btn-c" type="button">3</button>
+					<button id="btn_3_off" class="btn btn-success btn-c" type="button">3</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button id="btn_9_on" class="btn btn-default btn-c" type="button">9</button>
+					<button id="btn_9_off" class="btn btn-success btn-c" type="button">9</button>
+				</td>
+				<td colspan="2">
+					<button id="btn_all_off" class="btn btn-default btn-c" type="button">OFF</button>
+				</td>
+				<td>
+					<button id="btn_4_on" class="btn btn-default btn-c" type="button">4</button>
+					<button id="btn_4_off" class="btn btn-success btn-c" type="button">4</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button id="btn_8_on" class="btn btn-default btn-c" type="button">8</button>
+					<button id="btn_8_off" class="btn btn-success btn-c" type="button">8</button>
+				</td>
+				<td>
+					<button id="btn_7_on" class="btn btn-default btn-c" type="button">7</button>
+					<button id="btn_7_off" class="btn btn-success btn-c" type="button">7</button>
+				</td>
+				<td>
+					<button id="btn_6_on" class="btn btn-default btn-c" type="button">6</button>
+					<button id="btn_6_off" class="btn btn-success btn-c" type="button">6</button>
+				</td>
+				<td>
+					<button id="btn_5_on" class="btn btn-default btn-c" type="button">5</button>
+					<button id="btn_5_off" class="btn btn-success btn-c" type="button">5</button>
+				</td>
+			</tr>
+		</table>
+	</div>
+	
+	<script>
+		var ws = null;
+		
+		$('#cloud_status').hide();
+		
+		$(function() {
+			connect();
+		});
+		
+        $('#btn_start').click(function(){
+			ws.send('sprinkler', {"cmd":"start",});
+		});
+		$('#btn_stop').click(function(){
+			ws.send('sprinkler', {"cmd":"stop",});
+		});
+        
+		$('#btn_1_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"0","value":"1"});
+		});
+		$('#btn_1_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"0","value":"0"});
+		});
+		
+		$('#btn_2_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"1","value":"1"});
+		});
+		$('#btn_2_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"1","value":"0"});
+		});
+		
+		$('#btn_3_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"2","value":"1"});
+		});
+		$('#btn_3_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"2","value":"0"});
+		});
+		
+		$('#btn_4_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"3","value":"1"});
+		});
+		$('#btn_4_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"3","value":"0"});
+		});
+		
+		$('#btn_5_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"4","value":"1"});
+		});
+		$('#btn_5_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"4","value":"0"});
+		});
+		
+		$('#btn_6_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"5","value":"1"});
+		});
+		$('#btn_6_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"5","value":"0"});
+		});
+		
+		$('#btn_7_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"6","value":"1"});
+		});
+		$('#btn_7_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"6","value":"0"});
+		});
+		
+		$('#btn_8_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"7","value":"1"});
+		});
+		$('#btn_8_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"7","value":"0"});
+		});
+		
+		$('#btn_9_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"8","value":"1"});
+		});
+		$('#btn_9_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"8","value":"0"});
+		});
+		
+		$('#btn_10_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"9","value":"1"});
+		});
+		$('#btn_10_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"9","value":"0"});
+		});
+		
+		$('#btn_11_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"10","value":"1"});
+		});
+		$('#btn_11_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"10","value":"0"});
+		});
+		
+		$('#btn_12_on').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"11","value":"1"});
+		});
+		$('#btn_12_off').click(function(){
+			ws.send('sprinkler', {"cmd":"set","channel":"11","value":"0"});
+		});
+		
+		$('#btn_all_on').click(function(){
+			ws.send('sprinkler', {"cmd":"setall","value":"1"});
+		});
+		$('#btn_all_off').click(function(){
+			ws.send('sprinkler', {"cmd":"setall","value":"0"});
+		});
+		
+		function connect() {
+        
+            ws = $.websocket("ws://" + $(location).attr('host') + "/ws?id=control", {
+                events: {
+				
+                    message: function(e)
+                    {
+                        $('#message').text(e.data);
+                        //ws.send('man_message_displayed', e.data);
+                    },
+					
+					status: function(e)
+                    {
+						console.log('realy status', e.data);
+						
+						if (e.data['relay'][0] == 1) {
+							$('#btn_1_on').hide();
+							$('#btn_1_off').show();
+						} else {
+							$('#btn_1_on').show();
+							$('#btn_1_off').hide();
+						}
+                        if (e.data['relay'][1] == 1) {
+							$('#btn_2_on').hide();
+							$('#btn_2_off').show();
+						} else {
+							$('#btn_2_on').show();
+							$('#btn_2_off').hide();
+						}
+						if (e.data['relay'][2] == 1) {
+							$('#btn_3_on').hide();
+							$('#btn_3_off').show();
+						} else {
+							$('#btn_3_on').show();
+							$('#btn_3_off').hide();
+						}
+						if (e.data['relay'][3] == 1) {
+							$('#btn_4_on').hide();
+							$('#btn_4_off').show();
+						} else {
+							$('#btn_4_on').show();
+							$('#btn_4_off').hide();
+						}
+						if (e.data['relay'][4] == 1) {
+							$('#btn_5_on').hide();
+							$('#btn_5_off').show();
+						} else {
+							$('#btn_5_on').show();
+							$('#btn_5_off').hide();
+						}
+						if (e.data['relay'][5] == 1) {
+							$('#btn_6_on').hide();
+							$('#btn_6_off').show();
+						} else {
+							$('#btn_6_on').show();
+							$('#btn_6_off').hide();
+						}
+						if (e.data['relay'][6] == 1) {
+							$('#btn_7_on').hide();
+							$('#btn_7_off').show();
+						} else {
+							$('#btn_7_on').show();
+							$('#btn_7_off').hide();
+						}
+						if (e.data['relay'][7] == 1) {
+							$('#btn_8_on').hide();
+							$('#btn_8_off').show();
+						} else {
+							$('#btn_8_on').show();
+							$('#btn_8_off').hide();
+						}
+						if (e.data['relay'][8] == 1) {
+							$('#btn_9_on').hide();
+							$('#btn_9_off').show();
+						} else {
+							$('#btn_9_on').show();
+							$('#btn_9_off').hide();
+						}
+						if (e.data['relay'][9] == 1) {
+							$('#btn_10_on').hide();
+							$('#btn_10_off').show();
+						} else {
+							$('#btn_10_on').show();
+							$('#btn_10_off').hide();
+						}
+						if (e.data['relay'][10] == 1) {
+							$('#btn_11_on').hide();
+							$('#btn_11_off').show();
+						} else {
+							$('#btn_11_on').show();
+							$('#btn_11_off').hide();
+						}
+						if (e.data['relay'][11] == 1) {
+							$('#btn_12_on').hide();
+							$('#btn_12_off').show();
+						} else {
+							$('#btn_12_on').show();
+							$('#btn_12_off').hide();
+						}
+						
+						
+						if (e.data['enable']) {
+							console.log("show");
+							$('#controls').show();
+							$('#en_message').text('');
+						} else {
+							console.log("hide");
+							$('#controls').hide();
+							$('#en_message').text('Disabled');
+						}
+                        
+                        if (e.data['play']) {
+							$('#btn_start').hide();
+							$('#btn_stop').show();
+                            
+                            $('#btn_1_on').prop('disabled', true);
+                            $('#btn_1_off').prop('disabled', true);
+                            $('#btn_2_on').prop('disabled', true);
+                            $('#btn_2_off').prop('disabled', true);
+                            $('#btn_3_on').prop('disabled', true);
+                            $('#btn_3_off').prop('disabled', true);
+                            $('#btn_4_on').prop('disabled', true);
+                            $('#btn_4_off').prop('disabled', true);
+                            $('#btn_5_on').prop('disabled', true);
+                            $('#btn_5_off').prop('disabled', true);
+                            $('#btn_6_on').prop('disabled', true);
+                            $('#btn_6_off').prop('disabled', true);
+                            $('#btn_7_on').prop('disabled', true);
+                            $('#btn_7_off').prop('disabled', true);
+                            $('#btn_8_on').prop('disabled', true);
+                            $('#btn_8_off').prop('disabled', true);
+                            $('#btn_9_on').prop('disabled', true);
+                            $('#btn_9_off').prop('disabled', true);
+                            $('#btn_10_on').prop('disabled', true);
+                            $('#btn_10_off').prop('disabled', true);
+                            $('#btn_11_on').prop('disabled', true);
+                            $('#btn_11_off').prop('disabled', true);
+                            $('#btn_12_on').prop('disabled', true);
+                            $('#btn_12_off').prop('disabled', true);
+						} else {
+							$('#btn_start').show();
+							$('#btn_stop').hide();
+                            
+                            $('#btn_1_on').prop('disabled', false);
+                            $('#btn_1_off').prop('disabled', false);
+                            $('#btn_2_on').prop('disabled', false);
+                            $('#btn_2_off').prop('disabled', false);
+                            $('#btn_3_on').prop('disabled', false);
+                            $('#btn_3_off').prop('disabled', false);
+                            $('#btn_4_on').prop('disabled', false);
+                            $('#btn_4_off').prop('disabled', false);
+                            $('#btn_5_on').prop('disabled', false);
+                            $('#btn_5_off').prop('disabled', false);
+                            $('#btn_6_on').prop('disabled', false);
+                            $('#btn_6_off').prop('disabled', false);
+                            $('#btn_7_on').prop('disabled', false);
+                            $('#btn_7_off').prop('disabled', false);
+                            $('#btn_8_on').prop('disabled', false);
+                            $('#btn_8_off').prop('disabled', false);
+                            $('#btn_9_on').prop('disabled', false);
+                            $('#btn_9_off').prop('disabled', false);
+                            $('#btn_10_on').prop('disabled', false);
+                            $('#btn_10_off').prop('disabled', false);
+                            $('#btn_11_on').prop('disabled', false);
+                            $('#btn_11_off').prop('disabled', false);
+                            $('#btn_12_on').prop('disabled', false);
+                            $('#btn_12_off').prop('disabled', false);
+						}
+                    },
+					
+                }
+            });
+            
+            ws.onclose = function(event) {
+				$('#ws_connected').hide();
+				$('#ws_disconnected').show();
+                setTimeout(function() {
+                    console.log('[Socket] Reconnect');
+                    connect();
+                }, 1000);
+            };
+            
+            ws.onopen = function(event) {
+                console.log('[Socket] Connected');
+                ws.send('status', "1");
+				$('#ws_connected').show();
+				$('#ws_disconnected').hide();
+				$('#ws_status').html('<span class="glyphicon glyphicon-eye-open font-size-lg" title="Connected"></span>');
+            };
+            
+        }
+	</script>
+{% end %}

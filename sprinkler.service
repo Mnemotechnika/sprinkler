@@ -1,0 +1,14 @@
+[Unit]
+Description=Sprinkler service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=dadpuszta
+ExecStart=/usr/bin/env python3 /home/dadpuszta/sprinkler/app.py
+
+[Install]
+WantedBy=multi-user.target

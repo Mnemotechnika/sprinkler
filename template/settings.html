@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Settings{% end %}
+{% block head %}{% end %}
+{% block body %}
+	<nav class="navbar navbar-default">
+	  <div class="container-fluid">
+		<div class="navbar-header">
+		  <a class="navbar-brand" href="#">
+			Main Sprinkler
+		  </a>
+		</div>
+		<ul class="nav navbar-nav">
+			<li><a href="/">Control</a></li>
+			<li class="active"><a href="#">Settings</a></li>
+		</ul>
+		<div class="navbar-text navbar-right">
+			<span>admin</span>
+			<a href="/logout" class="navbar-link">Logout</a>
+		</div>
+	  </div>
+	</nav>
+	
+	<div class="container">
+		<form class="form" action="/settings" method="post">
+			<div class="form-group">
+				<div class="checkbox">
+					<label>
+						{% if work_en == "1" %}
+							<input name="work_en" type="checkbox" checked="checked">
+						{% else %}
+							<input name="work_en" type="checkbox">
+						{% end %}
+						<b>Workinghours Enable</b>
+					</label>
+				</div>
+				<label for="inp_work_start">Start</label>
+				<input type="text" name="work_start" class="form-control" id="inp_work_start" placeholder="00:00" title="HH:MM" value="{{ work_start }}">
+				<label for="inp_work_end">End</label>
+				<input type="text" name="work_end" class="form-control" id="inp_work_end" placeholder="00:00" title="HH:MM" value="{{ work_end }}">
+			</div>
+			<div class="form-group">
+				{% module xsrf_form_html() %}
+				<button type="submit" class="btn btn-primary btn-block">Save</button>
+			</div>
+		</form>
+	</div>
+{% end %}
